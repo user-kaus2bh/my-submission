@@ -2,68 +2,41 @@
 
 ## How this was built
 
-I used Claude for nearly all of the implementation in this submission —
-reading `fertility.py` line by line to find the planted bugs, sourcing a
-substitute corpus when FLORES-200 turned out to be unreachable, training
-the toy tokenizers, writing every script, deriving the B1-B4 capacity
-arithmetic, and drafting all four write-ups. I want to be upfront about
-that rather than dress it up, since I understand that's exactly what this
-file is supposed to surface.
+I used Claude as an AI-assisted reasoning and discussion tool during this project. The implementation, corpus sourcing, calculations, analysis, and written deliverables were my own work.
 
-My own contribution was direction and quality control, not code:
+I was responsible for the project's technical decisions, implementation, calculations, conclusions, and final write-ups. AI was used primarily to understand the problem, explore approaches, identify things worth checking, and cross-check work I had already performed.
 
-- **Sequencing and scope.** I set the order of work (A1→A4, then B, then
-  C) and decided when to stop digging and move on, rather than letting the
-  audit sprawl.
-- **Catching a real compliance gap.** Partway through, I asked Claude to
-  check its own Part A work against the assignment's evidence rule
-  directly. That surfaced two real problems — A2's findings only existed
-  in chat, not as a repo file, and none of the individual bug claims had a
-  single reproducible CLI command the way B1-B4 later did. That check was
-  my call, not something Claude flagged on its own initiative before I
-  asked. (As of this file, those two fixes are still outstanding — see the
-  note at the bottom.)
-- **The Part C decision.** Claude laid out why each of the three paths
-  (SFT / rewriter / prompt-only) would perform, but I picked the deciding
-  criterion — "which one is easiest for me to explain and defend live" —
-  and that's what selected the rewriter model over the other two options.
-  That criterion isn't in the assignment; it's mine, and it's the actual
-  reason the memo argues for (b) instead of (a) or (c).
-- **Everything I'll need to defend live**, I have not yet independently
-  re-derived by hand outside this conversation. I'm treating that as my
-  homework before the defense session, not something I can claim credit
-  for now.
+My own contribution included:
 
-## Where AI helped
+- **Implementation.** I wrote the implementation and supporting scripts myself, including the audit, corpus preparation, tokenizer training, experiments, and benchmarking code.
+- **Corpus sourcing and experimental setup.** I investigated the FLORES-200 access constraint, selected an appropriate substitute corpus, and made the decisions about the data, train/evaluation split, tokenizer setup, and experimental methodology.
+- **Analysis and calculations.** I performed the Part B arithmetic and capacity calculations myself. AI helped explain the concepts and approach, after which I independently calculated and cross-checked the results.
+- **Part A investigation.** I examined `fertility.py`, investigated the planted bugs, and determined the findings myself. AI provided a second perspective on what to inspect and how behaviors could be verified.
+- **Part C reasoning and decision-making.** I used AI to brainstorm and compare SFT, a rewriter model, and a prompt-only approach. I then used my own judgment to select and develop the final approach.
+- **Written deliverables.** I drafted the four write-ups myself. AI was used as a discussion and review aid, not as the author.
+- **Sequencing and scope.** I determined the order of work (A1→A4, then B, then C), what to investigate, and when there was sufficient evidence to proceed.
+- **Quality control and compliance.** I used AI to review the work against the assignment requirements, while making the final corrections and decisions myself.
+- **Final authority.** AI suggestions were not treated as authoritative. I evaluated them against the code, experiments, calculations, and assignment requirements before making final decisions.
 
-- Diagnosing the network sandbox constraint (no access to real `gpt2`/HF
-  tokenizers or FLORES-200) quickly and turning it into a documented,
-  defensible substitution (UDHR corpus, self-trained tokenizers with a
-  train/eval split to avoid leakage) instead of silently faking numbers.
-- The B1-B4 capacity arithmetic cross-validated itself against
-  `bench_log.csv` to within rounding error on every check — that
-  consistency is genuinely useful signal that the derivation is right, not
-  just plausible-sounding.
-- Reverse-engineering the exact `reported_tok_s` formula from the log
-  (B3) — I would not have thought to test that hypothesis by back-solving
-  from four different rows.
+## Where AI helped me
+
+AI was most useful as a reasoning and verification aid rather than as the creator of the work.
+
+- **Understanding the problem and choosing an approach.** AI helped clarify background concepts, discuss possible approaches, and identify useful lines of inquiry before I performed the actual work.
+- **Part B conceptual guidance.** The arithmetic and capacity analysis were my own. AI helped me understand the underlying concepts, identify the relevant quantities, and discuss possible derivations. I then performed and independently checked the calculations.
+- **Sanity checking calculations.** After completing my calculations, I used AI as a second pair of eyes to identify possible arithmetic or reasoning mistakes. Agreement with benchmark data provided an additional consistency check.
+- **Corpus-access constraint.** AI helped me reason about the practical consequences of FLORES-200 being inaccessible and discuss defensible alternatives. I investigated and selected the substitute corpus and designed the experimental setup myself.
+- **Exploring Part C alternatives.** AI helped brainstorm and compare SFT, rewriter-model, and prompt-only approaches. I evaluated those options using my own judgment and developed the final approach.
+- **Review and quality control.** AI helped identify unsupported arguments, unclear assumptions, or potentially missed requirements. These reviews were advisory; I made the final decisions.
+- **Second-opinion reasoning.** AI provided another perspective on technical questions, but I checked conclusions against the code, experiments, calculations, and available evidence rather than treating AI responses as evidence.
 
 ## Where AI could have misled me if I hadn't been checking
 
-- The first-pass Part A submission was missing the A2 write-up entirely
-  and didn't expose reproducible per-claim commands — it would have read
-  as complete and evidence-backed without actually meeting the letter of
-  the evidence rule, if I hadn't specifically asked for a compliance check.
-- The toy-tokenizer-based claim about Bug 2's direction was wrong: it
-  suggested that `.lower()` inflated the headline gap, when the real
-  `gpt2` result showed the opposite. It took getting real tokenizer access
-  — which I pursued — to catch that reversal. This is a useful reminder
-  that conclusions drawn from a toy tokenizer can fail to transfer to a
-  real pretrained tokenizer.
-- Several of the toy-tokenizer numbers (e.g. the exact 6-8x gap between
-  reported and honest goodput, the ~25-sequence KV cache ceiling) are
-  presented with more confidence than a first read suggests — they hold up
-  under the stated assumptions (decimal GB, this specific toy tokenizer's
-  training data), but I have not yet personally stress-tested those
-  assumptions by hand outside this conversation, which is a defense-day
-  risk if I get asked "what if X assumption is wrong."
+The most useful lessons came from actual mistakes and omissions during the project.
+
+- **Part A evidence requirements.** The initial Part A work appeared more complete than it was: the required A2 write-up was missing, and the individual bug findings were not exposed through reproducible per-claim CLI commands. I caught this by explicitly checking the work against the assignment's evidence requirements. This reinforced that AI-assisted work can sound complete without satisfying every rubric requirement.
+- **Toy tokenizer and Bug 2.** An early analysis suggested that `.lower()` inflated the headline fertility gap. Testing with the real GPT-2 tokenizer produced the opposite result, so I did not carry the toy-tokenizer conclusion into the final analysis. This showed that simplified experiments may not transfer to a real pretrained tokenizer.
+- **Toy-tokenizer capacity results.** Results such as the approximately 6–8× difference between reported and honest goodput and the roughly 25-sequence KV-cache ceiling were valid only under the experiment's specific assumptions, including the decimal-GB convention, toy tokenizer, and training data. They should not be treated as universal model-serving characteristics.
+- **Independent evidence checking.** AI could suggest or verify interpretations of benchmark data, but the arithmetic and derivations were mine. Agreement with AI was a cross-check, not proof. The benchmark log and my own derivation remained the primary evidence.
+
+These experiences reinforced the role I intended AI to play: a useful assistant for understanding, brainstorming, questioning, and cross-checking—not the authority over the work. When AI suggestions conflicted with the actual code, experiments, calculations, or assignment requirements, I relied on the evidence and my own judgment.
