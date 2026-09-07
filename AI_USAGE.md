@@ -62,9 +62,4 @@ My own contribution was direction and quality control, not code:
   assumptions by hand outside this conversation, which is a defense-day
   risk if I get asked "what if X assumption is wrong."
 
-## Outstanding before this is submission-ready
 
-- `partA/A2_audit.md` does not exist yet as a file — A2's findings are
-  currently only in the chat transcript, not the repo.
-- The A2 bug claims don't yet have single, exact reproducible commands the
-  way B1-B4 do via `partB/verify.py`.
