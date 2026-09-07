@@ -54,6 +54,12 @@ My own contribution was direction and quality control, not code:
   and didn't expose reproducible per-claim commands — it would have read
   as complete and evidence-backed without actually meeting the letter of
   the evidence rule, if I hadn't specifically asked for a compliance check.
+- The toy-tokenizer-based claim about Bug 2's direction was wrong: it
+  suggested that `.lower()` inflated the headline gap, when the real
+  `gpt2` result showed the opposite. It took getting real tokenizer access
+  — which I pursued — to catch that reversal. This is a useful reminder
+  that conclusions drawn from a toy tokenizer can fail to transfer to a
+  real pretrained tokenizer.
 - Several of the toy-tokenizer numbers (e.g. the exact 6-8x gap between
   reported and honest goodput, the ~25-sequence KV cache ceiling) are
   presented with more confidence than a first read suggests — they hold up
@@ -61,5 +67,3 @@ My own contribution was direction and quality control, not code:
   training data), but I have not yet personally stress-tested those
   assumptions by hand outside this conversation, which is a defense-day
   risk if I get asked "what if X assumption is wrong."
-
-

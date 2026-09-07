@@ -77,6 +77,42 @@ which inflates — not just adds noise to — the report's headline gap.
 
 ---
 
+## Update — re-run with real gpt2 (once HuggingFace access was available)
+
+The toy-tokenizer numbers above were a sandbox workaround. With real
+`gpt2` on the identical original corpus:
+
+| variant | ratio | Δ from baseline |
+|---|---|---|
+| baseline | 5.887 | — |
+| --fix-split | 5.922 | +0.6% |
+| --fix-lower | 6.059 | +2.9% |
+| --micro-average | 5.908 | +0.4% |
+| --all combined | 6.092 | +3.5% |
+
+**Correction to our earlier claim:** we originally said Bug 2 (`.lower()`)
+*inflates* the reported gap. With real gpt2, fixing the bug moves the
+ratio *up* (5.887→6.059), not down — meaning the bug actually
+**understates** the true disparity slightly, the opposite of what the
+toy tokenizer (with its tiny, casing-sensitive vocab) suggested. Real
+GPT-2's much larger vocabulary already handles casing variation well, so
+the effect that looked large in the toy experiment (-30% English
+fertility) shrinks to -2.8% with the real tokenizer.
+
+**The bigger finding: none of the code-level bugs explain why "5.89×" is
+misleading.** Fixing all four bugs together moves the ratio by only
++3.5%, in the wrong direction to make the report's number look
+overstated. The real explanation for why 5.89× is the wrong number to
+plan around is entirely the conceptual bug (tok/word isn't a valid
+cross-language unit) and the tokenizer-choice finding in A3 — not
+anything fixable inside `fertility.py` itself.
+
+Bug 3 (chars→graphemes) is the one exception that got *bigger*, not
+smaller, with real data: hin tok/char moves 1.579→2.450 (+55%), larger
+than the toy tokenizer suggested, because real gpt2 already produces far
+more tokens for Hindi, so the same codepoint-vs-grapheme miscount
+compounds into a bigger swing on that specific column.
+
 ## Bug 3 — `chars = len(line)` counts codepoints, not grapheme clusters
 
 **Claim:** Devanagari builds a visual character from a base consonant plus

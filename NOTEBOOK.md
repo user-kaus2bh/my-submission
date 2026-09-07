@@ -147,3 +147,27 @@ found in A3), kept REPORT_v0's tokenizer-routing recommendation (that part
 survives the audit), and proposed monitoring tokens-billed-per-resolved-
 request-by-language in production as the operational version of A3's
 tok/sentence metric.
+
+### Session N — real tokenizer access obtained
+
+Gained HuggingFace Hub + tiktoken blob storage access outside the original
+sandbox. Re-ran A2 against real `gpt2` on the original corpus, and A3
+against real `gpt2`/`xlm-roberta-base` on a real 200-sentence FLORES-200
+corpus (8 languages, aligned by sentence ID via
+`openlanguagedata/flores_plus`).
+
+**Caught and corrected our own directional error:** originally claimed
+Bug 2 (`.lower()`) inflates REPORT_v0's headline gap. Real gpt2 data shows
+the opposite — fixing the bug increases the ratio slightly
+(5.887→6.059), meaning the bug marginally understates the disparity, not
+overstates it. The toy tokenizer's tiny, casing-sensitive vocabulary
+exaggerated an effect that's much smaller (and reversed) in the real
+tokenizer's much larger vocabulary.
+
+**Bigger revision:** all four code-level bugs combined move the ratio by
+only +3.5% — they don't explain why REPORT_v0's 6x number is wrong. The
+real explanation is entirely the conceptual bug (A2) and tokenizer choice
+(A3): xlm-roberta-base shows a real, tightly-clustered ~1.3x overhead
+across 6 languages, replacing our earlier toy-tokenizer estimate of
+~2.5x. This independently matches [friend]'s numbers (1.22x-1.35x) almost
+exactly, despite using a different corpus sample.

@@ -4,26 +4,22 @@
 **Re:** Correction to REPORT_v0 tokenizer findings, and updated routing recommendation
 **Status:** supersedes Section 1 of REPORT_v0
 
-## Corrected headline numbers
+## Corrected headline numbers (revised with real tokenizer data)
 
-REPORT_v0 claimed Hindi costs **~6× more tokens than English** to serve,
-attributed to "a property of the script." Both the multiplier and the
-causal claim are wrong.
+The corrected multiplier, measured with a real production-grade
+multilingual tokenizer (xlm-roberta-base) on real FLORES-200 sentences,
+is **~1.3x, not ~2.5x** (our earlier toy-tokenizer estimate) and nowhere
+near REPORT_v0's 6x. This number is tightly consistent across all 6
+Indic languages tested (1.26x-1.37x).
 
-- The 6× figure came from `fertility.py`'s tokens-per-word metric, computed
-  with a tokenizer-agnostic framing that isn't tokenizer-agnostic at all:
-  under an English-trained tokenizer the same script shows **10–20× worse**
-  fertility; under a multilingual-aware tokenizer the same script shows
-  **~2–3× worse**. The gap is dominated by *which tokenizer you use*, not
-  an inherent property of Devanagari or Dravidian scripts.
-- On the denominator that actually holds real content constant — tokens
-  needed per unit of equivalent translated content, not per word/byte/
-  grapheme, all of which distort the comparison in different directions
-  (see A3) — the corrected multiplier for Hindi, Kannada, Tamil, Telugu,
-  Bengali, and Marathi against English is **~2.0×–2.9×**, tightly
-  clustered across all six languages, not 6×.
+## Routing recommendation (revised)
 
-## Routing recommendation
+Given how small the residual overhead is with the right tokenizer
+(~1.3x), the stronger recommendation is: **do not build separate
+Indic-specific serving infrastructure at all** — ensure the serving
+stack uses a multilingual-aware tokenizer (not an English-centric one
+like gpt2), and budget ~1.3x, not 6x or even 2.5x. Separate infra adds
+operational complexity that this data doesn't justify.
 
 Route Indic traffic to a **multilingual/Indic-aware tokenizer and model**,
 as REPORT_v0 recommended — that part of the conclusion survives the audit.

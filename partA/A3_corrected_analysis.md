@@ -27,115 +27,246 @@ Four denominators, all using the A2-fixed code (`split()` not `split(" ")`,
 no forced lowercasing, true grapheme clusters via Unicode `\X` clusters not
 raw codepoints, micro-averaged as sum/sum not per-line macro-average).
 
-## Headline numbers (UDHR eval split, held out)
+## Update — real tokenizers, real FLORES-200 corpus
 
-| lang | tokzr | tok/word | tok/grapheme | tok/byte | tok/sentence |
-|---|---|---|---|---|---|
-| eng | web-english (A) | 1.35 | 0.221 | 0.220 | 87.4 |
-| eng | multiling (B) | 2.08 | 0.338 | 0.338 | 134.1 |
-| hin | web-english (A) | 14.41 | 4.299 | **1.000** | 1096.2 |
-| hin | multiling (B) | 3.88 | 1.157 | 0.269 | 295.0 |
-| kan | web-english (A) | 26.73 | 4.194 | **1.000** | 1077.4 |
-| kan | multiling (B) | 7.30 | 1.146 | 0.273 | 294.3 |
-| tam | web-english (A) | 31.03 | 4.419 | **1.000** | 1374.7 |
-| tam | multiling (B) | 8.70 | 1.239 | 0.280 | 385.5 |
-| tel | web-english (A) | 26.39 | 4.700 | **1.000** | 1129.3 |
-| tel | multiling (B) | 7.09 | 1.263 | 0.269 | 303.5 |
-| mal | web-english (A) | 39.67 | 6.215 | **1.000** | 1241.8 |
-| mal | multiling (B) | 10.92 | 1.711 | 0.275 | 341.9 |
-| ben | web-english (A) | 19.47 | 4.490 | **1.000** | 991.0 |
-| ben | multiling (B) | 5.36 | 1.236 | 0.275 | 272.7 |
-| mar | web-english (A) | 19.90 | 4.707 | **1.000** | 1136.2 |
-| mar | multiling (B) | 5.52 | 1.307 | 0.278 | 315.4 |
+The toy-tokenizer experiment has now been replaced by a direct comparison
+using **real production tokenizers** and a substantially stronger evaluation
+corpus: **200 real, aligned FLORES-200 dev sentences per language** (not
+UDHR), tokenized with real `gpt2` and real `xlm-roberta-base`.
 
-(Casual-domain subset, eng+hin only — same direction, confirms it's not a
-formal-register artifact: tok/word ratio 7.6× under tok_A vs. 1.1× under
-tok_B; full numbers in `corrected_analysis.py` output.)
+The comparison uses **tok/sentence ratio vs English**, where each sentence
+is a translation-equivalent content unit across languages. This avoids the
+problems identified with word, grapheme, and byte denominators: the
+denominator represents the same underlying content rather than a
+language-specific orthographic or segmentation convention.
 
-## Finding 1 — the report's "it's the script, not the tokenizer" claim is wrong
+### Real-tokenizer results
 
-Look at the **hin/eng ratio** for the *same script*, under the two
-tokenizers:
+| lang | GPT-2 | XLM-RoBERTa-base |
+|---|---:|---:|
+| hin | 7.27× | 1.27× |
+| kan | 13.24× | 1.37× |
+| tam | 14.95× | 1.34× |
+| tel | 12.56× | 1.33× |
+| mal | 14.49× | 1.37× |
+| ben | 9.52× | 1.36× |
+| mar | 7.72× | 1.26× |
 
-| denominator | ratio under tok_A (web-english) | ratio under tok_B (multilingual) |
-|---|---|---|
-| tok/word | **10.65×** | **1.87×** |
-| tok/grapheme | 19.50× | 3.42× |
-| tok/byte | 4.54× | 0.80× |
-| tok/sentence | 12.54× | 2.20× |
+The XLM-R range is only **1.26×–1.37×**, a spread of **0.11×**, across six
+typologically distinct Indic languages. This is remarkably tight compared
+with GPT-2, where the ratios range from **7.27× to 14.95×**.
 
-Same Hindi text, same script, same content. The ratio moves by **5–8×**
-depending purely on what the tokenizer was trained on. Under tok_A, Hindi's
-`tok/byte` is exactly **1.0000** — every single UTF-8 byte becomes its own
-token, because a tokenizer that has never seen a Devanagari byte sequence
-has no merges for it and falls back to raw bytes. This is the real,
-well-documented failure mode of English-centric BPE tokenizers (GPT-2's
-real tokenizer does exactly this to Hindi/Kannada/Tamil/Telugu/Malayalam
-text). REPORT_v0's claim that "any tokenizer will struggle... this is a
-property of the script, not the tokenizer" is directly falsified by this
-experiment: swapping only the tokenizer's training data cuts the gap by
-roughly 5–8× while the script stays identical.
+The result also independently matches another run using a different corpus
+very closely: for example, the other run found approximately **1.22× for
+Hindi, 1.30× for Malayalam, and 1.35× for Tamil** under XLM-R. Two
+independent runs, using different corpora, converging on essentially the
+same result provides additional evidence that the effect is not an artifact
+of one particular dataset.
 
-## Finding 2 — which denominator to trust, and why
+For context, the earlier A2 debugging exercise showed that the code fixes
+themselves have only a modest effect on the real GPT-2 result:
 
-The spread across denominators, under the *same* (multilingual) tokenizer:
+| variant | eng_fert | hin_fert | ratio | Δ from baseline |
+|---|---:|---:|---:|---:|
+| baseline | 1.265 | 7.448 | 5.887 | — |
+| `--fix-split` | 1.283 | 7.598 | 5.922 | +0.6% |
+| `--fix-lower` | 1.229 | 7.448 | 6.059 | +2.9% (wrong direction from our original claim) |
+| `--fix-chars` (tpc only) | — | — | tpc: 1.579→2.450 | +55% on tok/char specifically |
+| `--micro-average` | 1.253 | 7.403 | 5.908 | +0.4% |
+| `--all` | 1.247 | 7.598 | 6.092 | +3.5% |
 
-| lang | tok/word ratio vs eng | tok/sentence ratio vs eng | tok/byte ratio vs eng | tok/grapheme ratio vs eng |
-|---|---|---|---|---|
-| hin | 1.87 | 2.20 | 0.80 | 3.42 |
-| kan | 3.52 | 2.19 | 0.81 | 3.39 |
-| tam | 4.19 | 2.87 | 0.83 | 3.66 |
-| tel | 3.42 | 2.26 | 0.80 | 3.73 |
-| mal | 5.26 | 2.55 | 0.81 | 5.06 |
-| ben | 2.58 | 2.03 | 0.81 | 3.65 |
-| mar | 2.66 | 2.35 | 0.82 | 3.86 |
+Thus, under real GPT-2, correcting the analysis code changes the headline
+English/Hindi ratio from **5.887× to 6.092×**, only **+3.5%** overall. The
+much larger effect comes from **which tokenizer is used**, not from the
+implementation details of the fertility calculation.
 
-Reasoning through each candidate, per the assignment's hint ("what is the
-denominator supposed to hold constant?"):
+## Finding 1 — tokenizer choice, not script, determines the cross-language gap
 
-- **tok/word** — supposed to hold "one unit of language" constant, but
-  doesn't: Malayalam and Tamil are more agglutinative than Hindi (more
-  morphology packed per whitespace-delimited word), so their ratio (5.26×,
-  4.19×) is inflated by *word-segmentation convention*, not real cost. This
-  is exactly the A2 conceptual bug, confirmed here across 6 more languages.
-- **tok/grapheme** — supposed to hold "one visual character" constant, but
-  a Devanagari/Dravidian grapheme cluster (consonant + vowel sign,
-  sometimes + conjunct) typically encodes more phonetic/orthographic
-  information than a single Latin letter. Ratio (3.4–5.1×) partly reflects
-  that information-per-grapheme difference, not tokenizer waste.
-- **tok/byte** — supposed to hold "one unit of transmitted data" constant,
-  but UTF-8 encodes Devanagari/Dravidian scripts in 3 bytes/character vs.
-  Latin's 1 byte/character. That inflates the byte denominator for Indic
-  languages independent of content, which is why the ratio here is
-  **below 1** (0.80–0.83×) — i.e. tok/byte makes Hindi look *cheaper* than
-  English, which is clearly not the real-world experience of serving it.
-  This denominator is biased in the *opposite* direction from tok/word.
-- **tok/sentence (tokens per parallel content unit)** — supposed to hold
-  "the same real content" constant, and for once actually can: every
-  article number is a translation of identical meaning across all 8
-  languages. This is also the *tightest* spread across 6 typologically
-  distinct languages (2.03–2.87×, a 1.4× range) versus tok/word's
-  1.87–5.26× (a 2.8× range) or tok/grapheme's 3.39–5.06× (a 1.5× range,
-  but all inflated). Tighter spread across unrelated languages measuring
-  the same content is itself evidence this metric is capturing something
-  more real and less an artifact of any one language's segmentation
-  convention.
+The original claim that "it's the script, not the tokenizer" does not survive
+the real-tokenizer experiment.
 
-**Answer: tokens-per-unit-of-equivalent-content (tok/sentence here) should
-drive the routing/cost decision.** It's the only denominator that holds the
-thing an actual serving-cost decision cares about — how many billable
-tokens it takes to handle the same real request — constant across
-languages. Word count, grapheme count, and byte count all vary with
-orthographic and morphological convention in ways that have nothing to do
-with cost, and each biases the comparison in a different, non-obvious
-direction (tok/word and tok/grapheme *overstate* the Indic penalty by
-conflating it with morphology/script density; tok/byte *understates* it by
-conflating it with UTF-8 encoding width).
+The same underlying content, in the same language and script, behaves very
+differently depending on the tokenizer. Across the six Indic languages,
+GPT-2 produces tok/sentence ratios of **7.27×–14.95×** relative to English,
+while XLM-RoBERTa-base produces ratios of only **1.26×–1.37×**.
 
-**Limitation to flag explicitly:** tok/sentence only works because we have
-genuinely parallel content (UDHR articles translated from the same source).
-In production you won't have "the same request" issued in every language —
-you'd need either (a) a translation-equivalent benchmark set built for this
-purpose, or (b) a proxy like tokens-per-resolved-user-intent measured from
-real logs where the same intent occurs in multiple languages. This is the
-biggest caveat to carry into A4.
+That means the apparent Indic penalty changes by roughly **5–11× depending
+on tokenizer choice alone**, with no change to the underlying language,
+script, or content.
+
+The contrast is especially striking for the same language:
+
+- Hindi: **7.27× → 1.27×**
+- Kannada: **13.24× → 1.37×**
+- Tamil: **14.95× → 1.34×**
+- Telugu: **12.56× → 1.33×**
+- Malayalam: **14.49× → 1.37×**
+- Bengali: **9.52× → 1.36×**
+- Marathi: **7.72× → 1.26×**
+
+This is not a small correction to a script-dependent effect. The tokenizer
+choice fundamentally changes the measured cost of representing the same
+language.
+
+The mechanism is straightforward: tokenizers allocate their vocabulary and
+merge rules according to the text they were trained on. A tokenizer whose
+training data is overwhelmingly English-heavy can have poor coverage of
+Indic-script byte sequences, causing Indic text to fragment into many more
+tokens. A multilingual tokenizer trained to represent many scripts has
+vocabulary coverage and merge rules that are much better suited to those
+languages.
+
+The A2 result reinforces this interpretation. On the original real GPT-2
+corpus, fixing the analysis code moved the Hindi/English ratio from
+**5.887× to 6.092×**, just a **3.5%** change. In contrast, replacing GPT-2
+with XLM-R on the larger FLORES-200 evaluation produces an enormous
+reduction in the Indic/English gap.
+
+So the important variable is not simply "Latin vs. Indic script." It is the
+interaction between the language and the tokenizer's learned vocabulary.
+
+**Finding 1 confirmed, more strongly:** the same content, same script, under
+two real production tokenizers, swings from **7.27×–14.95× under GPT-2** to
+**1.26×–1.37× under XLM-RoBERTa-base** — a **5–11× change from tokenizer
+choice alone**, with zero change to the underlying language or content.
+
+## Finding 2 — tokens per equivalent content unit is the right metric
+
+The denominator should represent the thing an actual serving-cost decision
+cares about: **the amount of equivalent content being processed**.
+
+That is why **tok/sentence** is the most useful metric for this comparison.
+The FLORES-200 sentences are aligned translations, so a sentence in Hindi,
+Kannada, Tamil, Telugu, Malayalam, Bengali, or Marathi represents roughly
+the same underlying content as its English counterpart.
+
+By contrast, the other denominators introduce language-specific effects:
+
+- **tok/word** does not hold the amount of linguistic content constant.
+  Languages differ in morphology and word-segmentation conventions, so a
+  language that packs more morphology into each whitespace-delimited word
+  can appear artificially expensive.
+- **tok/grapheme** does not necessarily represent the same linguistic
+  information across scripts. A single grapheme cluster in an Indic writing
+  system can encode substantially more phonological or orthographic
+  information than a Latin letter.
+- **tok/byte** measures UTF-8 representation rather than linguistic content.
+  Indic characters generally occupy multiple UTF-8 bytes, so this denominator
+  can make Indic text look artificially efficient even when it requires far
+  more model tokens. It therefore measures an encoding property rather than
+  the serving cost we care about.
+- **tok/sentence**, when the sentences are genuinely translation-aligned,
+  holds the underlying content approximately constant. It therefore gives
+  the closest measurement of how many model tokens are required to process
+  equivalent information in different languages.
+
+The real FLORES-200 result makes this argument substantially stronger than
+the earlier toy experiment. Under XLM-RoBERTa-base, all six Indic languages
+fall into an extremely narrow **0.11-wide band: 1.26×–1.37× English**,
+despite substantial typological differences between them.
+
+That tightness is important. The languages include both **Indo-Aryan**
+(Bengali, Hindi, Marathi) and **Dravidian** languages (Kannada, Malayalam,
+Tamil, Telugu). Their morphology, phonology, and writing systems differ
+considerably, yet their token/sentence ratios under a genuinely
+multilingual tokenizer are remarkably similar.
+
+**Finding 2 confirmed, more strongly:** under XLM-RoBERTa-base, all six
+Indic languages cluster inside a **0.11-wide band (1.26×–1.37×)** despite
+being typologically very different (Indo-Aryan vs. Dravidian). That
+tightness — now on real data, not a toy tokenizer — is strong evidence that
+tok/sentence is capturing something real about tokenizer vocabulary
+coverage, rather than an artifact of any one language's word-segmentation
+convention.
+
+The practical conclusion is therefore:
+
+> **For routing and token-cost analysis, use tokens per unit of
+> translation-equivalent content whenever possible.**
+
+In this experiment, tok/sentence is the appropriate proxy because FLORES-200
+provides aligned translations. In production, the ideal benchmark would
+similarly compare translation-equivalent or intent-equivalent requests
+across languages. Where such alignment is unavailable, a proxy could be
+constructed from real logs by identifying the same user intent across
+languages and comparing the resulting token counts.
+
+This limitation should still be stated explicitly: **tok/sentence only works
+as a controlled denominator because the benchmark provides genuinely
+parallel content.** Production traffic will not consist of identical
+requests expressed in every language. A production analysis would therefore
+need either (a) a translation-equivalent benchmark set designed for this
+purpose, or (b) a proxy such as tokens per resolved user intent measured
+from real multilingual traffic.
+
+## New observation — GPT-2 is substantially worse on Dravidian languages
+
+The real FLORES-200 data reveals an additional pattern that was not visible
+as clearly in the earlier analysis.
+
+GPT-2 is roughly **2× worse on the Dravidian languages** than on Hindi:
+
+- Hindi: **7.27×**
+- Kannada: **13.24×**
+- Tamil: **14.95×**
+- Telugu: **12.56×**
+- Malayalam: **14.49×**
+
+By comparison, the three Indo-Aryan languages are:
+
+- Hindi: **7.27×**
+- Bengali: **9.52×**
+- Marathi: **7.72×**
+
+The exact historical composition of GPT-2's training corpus does not by
+itself establish precisely why this happens, so the strongest defensible
+interpretation is that GPT-2's learned vocabulary provides substantially
+poorer coverage for the Dravidian-script data represented here than for
+Devanagari and Bengali.
+
+In other words, the real tokenizer results suggest that the English-heavy
+tokenizer did not merely underrepresent "Indic languages" uniformly. Its
+coverage appears to vary substantially **within the Indic family**, with
+Dravidian languages suffering the largest fragmentation.
+
+That makes the tokenizer-allocation explanation even more compelling:
+if the effect were fundamentally a fixed property of "Indic scripts," we
+would not expect such large differences among Indic languages, nor would we
+expect all six to collapse into such a narrow range under XLM-RoBERTa.
+
+## Overall conclusion
+
+The corrected evidence points to a much cleaner conclusion than the
+original report.
+
+The A2 code corrections matter, but they are not the main story. On real
+GPT-2, the complete set of corrections changes the original Hindi/English
+ratio from **5.887× to 6.092×**, only **3.5%**.
+
+The major effect appears when the tokenizer itself changes.
+
+On **200 aligned FLORES-200 dev sentences**, real GPT-2 produces Indic
+token/sentence ratios ranging from **7.27× to 14.95×** relative to English.
+Real XLM-RoBERTa-base reduces those same ratios to **1.26×–1.37×**.
+
+Thus:
+
+1. **Tokenizer choice dominates the cross-language tokenization penalty.**
+2. **The script alone cannot explain the observed gap.**
+3. **tok/sentence is the most meaningful denominator when content is
+   genuinely parallel.**
+4. **A multilingual tokenizer dramatically reduces the Indic token-cost
+   penalty seen with English-centric GPT-2.**
+5. **The effect is not uniform across Indic languages under GPT-2: Dravidian
+   languages are substantially more fragmented.**
+6. **The extremely tight XLM-R range across six typologically diverse
+   languages provides strong evidence that the result reflects tokenizer
+   vocabulary coverage rather than merely word-segmentation conventions.**
+
+The strongest one-sentence summary is:
+
+> **Under real GPT-2, the apparent Indic token-cost penalty varies enormously
+> by language; under real XLM-RoBERTa-base, six very different Indic
+> languages converge to roughly 1.3× English — showing that the dominant
+> variable is tokenizer vocabulary coverage, not an inherent property of the
+> scripts themselves.**
